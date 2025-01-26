@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package meshix.v1;
+
+service MeshixService {
+  rpc PushPackage(PushPackageRequest) returns (PushPackageResponse) {}
+  rpc ListPackages(ListPackagesRequest) returns (ListPackagesResponse) {}
+}
+
+message Package {
+  string name = 1;
+  string version = 2;
+  NixMetadata nix_metadata = 3;
+}
+
+message NixMetadata {
+  string store_path = 1;
+  string main_bin = 2;
+}
+
+message PushPackageRequest {
+  Package package = 1;
+}
+
+message PushPackageResponse {}
+
+message ListPackagesRequest {}
+message ListPackagesResponse {
+  repeated Package packages = 1;
+}

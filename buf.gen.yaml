@@ -1,0 +1,20 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: gen/proto
+  disable:
+    - file_option: go_package
+      module: buf.build/googleapis/googleapis
+    - file_option: go_package
+      module: buf.build/bufbuild/protovalidate
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: gen/proto
+    opt: paths=source_relative
+  - remote: buf.build/grpc/go
+    out: gen/proto
+    opt: paths=source_relative
+inputs:
+  - directory: ./proto/
