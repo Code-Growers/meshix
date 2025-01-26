@@ -1,15 +1,14 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/master";
-    devenv.url = "github:cachix/devenv";
 
     treefmt-nix.url = "github:numtide/treefmt-nix";
     nix2container = {
       url = "github:nlewo/nix2container";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    mk-shell-bin.url = "github:rrbutani/nix-mk-shell-bin";
 
+    make-shell.url = "github:nicknovitski/make-shell";
     globset = {
       url = "github:pdtpartners/globset";
       inputs.nixpkgs-lib.follows = "nixpkgs";
@@ -19,7 +18,7 @@
   outputs = inputs@{ self, nixpkgs, flake-parts, treefmt-nix, systems, globset, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       imports = [
-        inputs.devenv.flakeModule
+        inputs.make-shell.flakeModules.default
       ];
       systems = [
         "x86_64-linux"
@@ -47,7 +46,8 @@
             default = serverPkg;
           };
 
-          devenv.shells.default = {
+          make-shells.default = {
+            env.LD_LIBRARY_PATH = "/home/wexder/development/meshix/ui/build/linux/x64/debug/plugins/flutter_pty/shared/";
             packages = [
               pkgs.buf
               pkgs.go
@@ -55,8 +55,8 @@
               pkgs.golint
               pkgs.goose
               pkgs.sqlc
+              pkgs.flutter327
             ];
-
           };
         };
     };
