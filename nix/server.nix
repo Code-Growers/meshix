@@ -95,6 +95,14 @@ buildGoModule {
     go generate ./server/cmd/main.go
   '';
 
+  postInstall = ''
+    mv $out/bin/cmd $out/bin/meshix-server
+  '';
+
   vendorHash = "sha256-8xyhN2Cfsgvz1VJAbBkYervvEhpjUQF8BL6k/Q8ViG8=";
+
+  meta = {
+    mainProgram = "meshix-server";
+  };
 }
 

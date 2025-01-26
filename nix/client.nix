@@ -68,9 +68,9 @@ buildGoModule {
   src = lib.fileset.toSource {
     root = ./..;
     fileset = globset.lib.globs ./.. [
-      "server/**"
+      "client/**"
+      "server/go.*"
       "agent/go.*"
-      "client/go.*"
       "gen/**"
       "go.*"
     ];
@@ -93,6 +93,14 @@ buildGoModule {
     cp -r ${protobufGenerated}/* gen/proto
   '';
 
+  postInstall = ''
+    mv $out/bin/cmd $out/bin/meshix-client
+  '';
+
   vendorHash = "sha256-8xyhN2Cfsgvz1VJAbBkYervvEhpjUQF8BL6k/Q8ViG8=";
+
+  meta = {
+    mainProgram = "meshix-client";
+  };
 }
 

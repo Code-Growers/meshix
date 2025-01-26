@@ -120,7 +120,13 @@ func getPackageVersion(ctx context.Context, expr string, cmd *BuildCommand, meta
 		return "", fmt.Errorf("Failed to eval package meta 'nix %s' : %w", strings.Join(evalArgs, " "), err)
 	}
 
-	return output.String(), nil
+	var version string
+	err = json.NewDecoder(output).Decode(&version)
+	if err != nil {
+		return "", err
+	}
+
+	return version, nil
 }
 
 func pushPackage(ctx context.Context, cacheUrl string, buildOutput nixBuildOutput) error {
