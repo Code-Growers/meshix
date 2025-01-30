@@ -93,7 +93,6 @@ func run(ctx context.Context) error {
 	mux.Handle("/cache/nar/{hash}.nar.{compression}", handlers.HandlenNar(minioClient))
 	mux.Handle("/cache/{hash}.narinfo", handlers.HandleNarInfo(minioClient))
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Printf("FUCK Method: %+v Path: %+v\n", r.Method, r.URL.Path)
 		w.WriteHeader(http.StatusNotFound)
 	}))
 

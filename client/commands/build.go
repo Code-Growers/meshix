@@ -54,7 +54,7 @@ func (x *BuildCommand) Execute(args []string) error {
 	}
 
 	if x.Cache != "" {
-		err = pushPackage(ctx, x.Cache, *buildOutput)
+		err = pushPackage(ctx, x.Cache, expr)
 		if err != nil {
 			return err
 		}
@@ -129,10 +129,10 @@ func getPackageVersion(ctx context.Context, expr string, cmd *BuildCommand, meta
 	return version, nil
 }
 
-func pushPackage(ctx context.Context, cacheUrl string, buildOutput nixBuildOutput) error {
-	slog.Info("Pushing to binary cache", "drv", buildOutput.DrvPaht, "out", buildOutput.Outputs[mainOutput])
+func pushPackage(ctx context.Context, cacheUrl string, expr string) error {
+	slog.Info("Pushing to binary cache", "expr", expr)
 
-	_, err := runNixCmd(ctx, "nix", "copy", "--to", cacheUrl, buildOutput.Outputs[mainOutput])
+	_, err := runNixCmd(ctx, "nix", "copy", "--to", cacheUrl, expr)
 	if err != nil {
 		return fmt.Errorf("Failed to push to binary cache: %w", err)
 	}
@@ -141,6 +141,7 @@ func pushPackage(ctx context.Context, cacheUrl string, buildOutput nixBuildOutpu
 
 func buildPackage(ctx context.Context, expr string) (*nixBuildOutput, error) {
 	slog.Info(fmt.Sprintf("Building %s", expr))
+	// TODO add substituters and trusted keys
 	output, err := runNixCmd(ctx, "nix", "build", "--json", expr)
 	if err != nil {
 		return nil, err
