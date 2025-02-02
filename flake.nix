@@ -34,6 +34,9 @@
           clientPkg = pkgs.callPackage ./nix/client.nix {
             globset = globset;
           };
+          serverDocker = pkgs.callPackage ./nix/docker.nix {
+            meshix-server = serverPkg;
+          };
         in
         {
           formatter = treefmtEval.config.build.wrapper;
@@ -44,6 +47,7 @@
             server = serverPkg;
             client = clientPkg;
             default = serverPkg;
+            server_docker = serverDocker;
           };
 
           make-shells.default = {

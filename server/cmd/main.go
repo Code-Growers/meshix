@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"runtime/debug"
+	"server/internal/config"
 	"server/internal/db"
 	"server/internal/domain"
 	"server/internal/handlers"
@@ -32,27 +33,42 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 
+	"github.com/alecthomas/kong"
 	_ "modernc.org/sqlite"
 )
 
 func main() {
 	ctx := context.Background()
-	if err := run(ctx); err != nil {
+	if err := run(ctx, os.Args); err != nil {
+		kongErr, ok := err.(kong.ParseError)
+		if ok {
+			fmt.Println(kongErr.Error())
+			os.Exit(1)
+		}
 		slog.ErrorContext(ctx, "Main func exited with error", "err", err)
 	}
 }
 
 var enabledLogging = true
 
-func run(ctx context.Context) error {
+var CLI struct {
+	SecretKey []string `name:"secret-key" help:"Binary cache secret key"`
+}
+
+func run(ctx context.Context, args []string) error {
+	cfg, err := config.LoadConfiguration(args)
+	if err != nil {
+		return err
+	}
+
 	grpcPanicRecoveryHandler := func(p any) (err error) {
 		slog.Error("gRPC recovered from panic", "panic", p, "stack", debug.Stack())
 		return status.Errorf(codes.Internal, "%s", p)
 	}
 
-	minioClient, err := minio.New("localhost:9001", &minio.Options{
-		Creds:  credentials.NewStaticV4("minio123", "minio123", ""),
-		Secure: false,
+	minioClient, err := minio.New(cfg.MinioCfg.Url.Host, &minio.Options{
+		Creds:  credentials.NewStaticV4(cfg.MinioCfg.AcccessKey, cfg.MinioCfg.AcccessSecret, ""),
+		Secure: cfg.MinioCfg.Url.Scheme == "https",
 	})
 	if err != nil {
 		return fmt.Errorf("Failed to create new minio client: %w", err)
@@ -91,7 +107,7 @@ func run(ctx context.Context) error {
 	mux := mux.NewRouter()
 	mux.HandleFunc("/cache/nix-cache-info", handlers.HandleNixCacheInfo)
 	mux.Handle("/cache/nar/{hash}.nar.{compression}", handlers.HandlenNar(minioClient))
-	mux.Handle("/cache/{hash}.narinfo", handlers.HandleNarInfo(minioClient))
+	mux.Handle("/cache/{hash}.narinfo", handlers.HandleNarInfo(minioClient, cfg.BinaryCacheCfg))
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
@@ -107,7 +123,7 @@ func run(ctx context.Context) error {
 
 	http2s := &http2.Server{}
 	s := http.Server{
-		Addr:              "0.0.0.0:8088",
+		Addr:              cfg.ListenAddr,
 		Handler:           h2c.NewHandler(muxer, http2s),
 		ReadTimeout:       0,
 		ReadHeaderTimeout: 0,

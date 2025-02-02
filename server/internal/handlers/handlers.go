@@ -3,16 +3,15 @@ package handlers
 import (
 	"bytes"
 	"context"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"server/internal/config"
 
 	"github.com/gorilla/mux"
 	"github.com/minio/minio-go/v7"
 	"github.com/nix-community/go-nix/pkg/narinfo"
-	"github.com/nix-community/go-nix/pkg/narinfo/signature"
 	"github.com/ulikunitz/xz"
 )
 
@@ -20,9 +19,6 @@ var cacheInfo = `WantMassQuery: 1
 StoreDir: /nix/store
 Priority: 39
 `
-
-var priv, _ = signature.LoadSecretKey("test:Gigkni0uVkGFOnkB7tAqXo8BX9SWoX1IHdIjUctmVBq3xMDDVMmjsyeYMnxW8xt7r9UbCPdivBD/Lx91V6kqIQ==")
-var pubKey = "test:t8TAw1TJo7MnmDJ8VvMbe6/VGwj3YrwQ/y8fdVepKiE="
 
 // Nix cache information.
 //
@@ -44,13 +40,7 @@ func HandleNixCacheInfo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// encode is the counterpart of the decode function above. Generate a
-// "<name>:<base64-data>" string from the underlying data structures.
-func encode(name string, data []byte) string {
-	return name + ":" + base64.StdEncoding.EncodeToString(data)
-}
-
-func HandleNarInfo(client *minio.Client) http.Handler {
+func HandleNarInfo(client *minio.Client, cacheCfg config.BinaryCacheCfg) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		fmt.Printf("NAR Info Method: %+v Path: %+v\n", r.Method, r.URL.Path)
@@ -115,7 +105,7 @@ func HandleNarInfo(client *minio.Client) http.Handler {
 			}
 			r.Body.Close()
 
-			sig, err := priv.Sign(nil, info.Fingerprint())
+			sig, err := cacheCfg.PrivateKey.Sign(nil, info.Fingerprint())
 			if err != nil {
 				slog.ErrorContext(ctx, "Failed to sign narinfo", "err", err)
 				w.WriteHeader(http.StatusInternalServerError)

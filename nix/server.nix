@@ -75,6 +75,7 @@ buildGoModule {
       "go.*"
     ];
   };
+  env.CGO_ENABLED = 0;
   version = "0.0.1";
   gitSha = "S9smJTcfEAFIMEPeaPC1yOyO6QDHwFthOztf4";
 
@@ -99,7 +100,7 @@ buildGoModule {
     mv $out/bin/cmd $out/bin/meshix-server
   '';
 
-  vendorHash = "sha256-8xyhN2Cfsgvz1VJAbBkYervvEhpjUQF8BL6k/Q8ViG8=";
+  vendorHash = "sha256-Bpyhsxu/SLRqm4SVSoZaMW5afNseHimVVawWWJ3IDIY=";
 
   meta = {
     mainProgram = "meshix-server";

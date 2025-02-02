@@ -1,0 +1,4 @@
+ListenAddr: "0.0.0.0:8088"
+SecretKey: ""
+Minio:
+  Url: http://localhost:9001
