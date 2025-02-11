@@ -12,7 +12,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/minio/minio-go/v7"
 	"github.com/nix-community/go-nix/pkg/narinfo"
-	"github.com/ulikunitz/xz"
 )
 
 var cacheInfo = `WantMassQuery: 1
@@ -134,7 +133,7 @@ func HandlenNar(client *minio.Client) http.Handler {
 		vars := mux.Vars(r)
 		hash := vars["hash"]
 		compression := vars["compression"]
-		if compression != "xz" {
+		if isCompressionSupported(compression) {
 			panic(fmt.Sprintf("Unknown compression: %v", compression))
 		}
 		if r.Method == http.MethodHead {
@@ -170,9 +169,9 @@ func HandlenNar(client *minio.Client) http.Handler {
 
 			w.Header().Add("content-type", "application/x-nix-nar")
 			compressedResp := bytes.NewBuffer([]byte{})
-			compressedW, err := xz.NewWriter(compressedResp)
+			compressedW, err := NewCompressionWriter(compression, compressedResp)
 			if err != nil {
-				slog.ErrorContext(ctx, "Failed to create xz writer", "err", err)
+				slog.ErrorContext(ctx, "Failed to create compression writer", "err", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
@@ -204,9 +203,9 @@ func HandlenNar(client *minio.Client) http.Handler {
 		if r.Method == http.MethodPut {
 			slog.InfoContext(ctx, "Uploading nar", "hash", hash, "length", r.ContentLength)
 			body := bytes.NewBuffer([]byte{})
-			compressionR, err := xz.NewReader(r.Body)
+			compressionR, err := NewCompressionReader(compression, r.Body)
 			if err != nil {
-				slog.ErrorContext(ctx, "Failed to create xz reader", "err", err)
+				slog.ErrorContext(ctx, "Failed to create compression reader", "err", err)
 				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
