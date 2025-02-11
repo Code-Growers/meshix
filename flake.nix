@@ -38,11 +38,11 @@
             meshix-server = serverPkg;
           };
         in
-        {
+        rec {
           formatter = treefmtEval.config.build.wrapper;
           checks = {
             # formatting = treefmtEval.config.build.check self';
-          };
+          } // packages;
           packages = {
             server = serverPkg;
             client = clientPkg;

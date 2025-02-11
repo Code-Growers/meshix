@@ -1,66 +1,12 @@
 { buildGoModule
 , lib
-, buf
+, callPackage
 , sqlc
-, protoc-gen-go
-, protoc-gen-go-grpc
-, stdenv
-, cacert
 , globset
 }:
 let
-  # Buf downloads dependencies from an external repo - there doesn't seem to
-  # really be any good way around it. We'll use a fixed-output derivation so it
-  # can download what it needs, and output the relevant generated code for use
-  # during the main build.
-  generateProtobufCode =
-    { pname
-    , nativeBuildInputs ? [ ]
-    , bufArgs ? ""
-    , workDir ? "."
-    , outputPath
-    , hash
-    ,
-    }:
-    stdenv.mkDerivation {
-      name = "${pname}-buf-generated";
-
-      src = lib.fileset.toSource {
-        root = ./..;
-        fileset = globset.lib.globs ./.. [
-          "proto/**"
-          "gen/**"
-          "buf.*"
-        ];
-      };
-
-      nativeBuildInputs = nativeBuildInputs ++ [
-        buf
-        cacert
-      ];
-
-      buildPhase = ''
-        cd ${workDir}
-        HOME=$TMPDIR buf generate ${bufArgs}
-      '';
-
-      installPhase = ''
-        cp -r ${outputPath} $out
-      '';
-
-      outputHashMode = "recursive";
-      outputHashAlgo = "sha256";
-      outputHash = hash;
-    };
-
-  protobufGenerated = generateProtobufCode {
-    pname = "meshix";
-    nativeBuildInputs = [
-      protoc-gen-go
-      protoc-gen-go-grpc
-    ];
-    outputPath = "gen/proto";
-    hash = "sha256-vCXV0UXW7UaTk12bc2QViUIsUlr/Xw7+XDykmZkY2IY=";
+  protobufGenerated = callPackage ./common.nix {
+    globset = globset;
   };
 in
 buildGoModule {
@@ -100,7 +46,7 @@ buildGoModule {
     mv $out/bin/cmd $out/bin/meshix-server
   '';
 
-  vendorHash = "sha256-Bpyhsxu/SLRqm4SVSoZaMW5afNseHimVVawWWJ3IDIY=";
+  vendorHash = "sha256-hNsQnAVrq5PXq/KpNa9U1Gz7LsVFo/B692DOCuueGWQ=";
 
   meta = {
     mainProgram = "meshix-server";
