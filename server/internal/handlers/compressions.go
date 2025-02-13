@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"errors"
+	"fmt"
 	"io"
+	"strings"
 
 	"github.com/andybalholm/brotli"
 	"github.com/dsnet/compress/bzip2"
@@ -21,8 +22,9 @@ func isCompressionSupported(compressionType string) bool {
 }
 
 func NewCompressionWriter(compressionType string, w io.Writer) (io.WriteCloser, error) {
-	if contains(supportedCompressions, compressionType) {
-		return nil, errors.New("Unsupported compression")
+	compressionType = strings.TrimSpace(compressionType)
+	if !contains(supportedCompressions, compressionType) {
+		return nil, fmt.Errorf("Unsupported compression: %s", compressionType)
 	}
 
 	switch compressionType {
@@ -40,12 +42,13 @@ func NewCompressionWriter(compressionType string, w io.Writer) (io.WriteCloser, 
 		return xz.NewWriter(w)
 	}
 
-	return nil, errors.New("Unsupported compression")
+	return nil, fmt.Errorf("Unsupported compression: %s", compressionType)
 }
 
 func NewCompressionReader(compressionType string, r io.Reader) (io.Reader, error) {
-	if contains(supportedCompressions, compressionType) {
-		return nil, errors.New("Unsupported compression")
+	compressionType = strings.TrimSpace(compressionType)
+	if !contains(supportedCompressions, compressionType) {
+		return nil, fmt.Errorf("Unsupported compression: %s", compressionType)
 	}
 
 	switch compressionType {
@@ -63,7 +66,7 @@ func NewCompressionReader(compressionType string, r io.Reader) (io.Reader, error
 		return xz.NewReader(r)
 	}
 
-	return nil, errors.New("Unsupported compression")
+	return nil, fmt.Errorf("Unsupported compression: %s", compressionType)
 }
 
 func contains(slice []string, value string) bool {

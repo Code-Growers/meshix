@@ -37,7 +37,15 @@ func run(args []string) error {
 		return err
 	}
 
-	_, err = parser.Parse()
+	_, err = parser.AddCommand("watch",
+		"Watch store",
+		"Watch store",
+		&commands.WatchCommand{})
+	if err != nil {
+		return err
+	}
+
+	_, err = parser.ParseArgs(args)
 	if err != nil {
 		return err
 	}

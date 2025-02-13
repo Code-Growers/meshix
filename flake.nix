@@ -52,6 +52,7 @@
 
           make-shells.default = {
             env.LD_LIBRARY_PATH = "./ui/build/linux/x64/debug/plugins/flutter_pty/shared/";
+
             packages = [
               pkgs.buf
               pkgs.go

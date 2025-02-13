@@ -15,8 +15,7 @@ buildGoModule {
     root = ./..;
     fileset = globset.lib.globs ./.. [
       "server/**"
-      "agent/go.*"
-      "client/go.*"
+      "client/**"
       "gen/**"
       "go.*"
     ];
@@ -46,7 +45,7 @@ buildGoModule {
     mv $out/bin/cmd $out/bin/meshix-server
   '';
 
-  vendorHash = "sha256-hNsQnAVrq5PXq/KpNa9U1Gz7LsVFo/B692DOCuueGWQ=";
+  vendorHash = "sha256-ri4rbFcs70T9q617GWZFTwfiaAmgEPhISRV9HMhbXJs=";
 
   meta = {
     mainProgram = "meshix-server";

@@ -15,15 +15,13 @@ buildGoModule {
     root = ./..;
     fileset = globset.lib.globs ./.. [
       "client/**"
-      "server/go.*"
-      "agent/go.*"
+      "server/**"
       "gen/**"
       "go.*"
     ];
   };
   version = "0.0.1";
   gitSha = "S9smJTcfEAFIMEPeaPC1yOyO6QDHwFthOztf4";
-
 
   proxyVendor = true;
   subPackages = [
@@ -43,7 +41,7 @@ buildGoModule {
     mv $out/bin/cmd $out/bin/meshix-client
   '';
 
-  vendorHash = "sha256-hNsQnAVrq5PXq/KpNa9U1Gz7LsVFo/B692DOCuueGWQ=";
+  vendorHash = "sha256-ri4rbFcs70T9q617GWZFTwfiaAmgEPhISRV9HMhbXJs=";
 
   meta = {
     mainProgram = "meshix-client";

@@ -33,6 +33,7 @@ type buildOverrides struct {
 type BuildCommand struct {
 	HubUrl    string         `long:"hub-url" description:"Url of package hub"`
 	Cache     string         `long:"cache" description:"Cache to push artifacts to, if not specified nothing is pushed"`
+	Watch     bool           `long:"Watch the store and upload changes when building package"`
 	Overrides buildOverrides `group:"overrides"`
 }
 
@@ -46,6 +47,19 @@ func (x *BuildCommand) Execute(args []string) error {
 	meta, err := getPackageMeta(ctx, expr)
 	if err != nil {
 		return err
+	}
+
+	watchCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if x.Watch {
+		go func() {
+			err := WatchStore(watchCtx, "/nix/store/", x.Cache)
+			if err != nil {
+				fmt.Printf("Watching store failed: %v\n", err)
+				os.Exit(1)
+			}
+		}()
 	}
 
 	buildOutput, err := buildPackage(ctx, expr)

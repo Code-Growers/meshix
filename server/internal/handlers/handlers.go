@@ -133,7 +133,7 @@ func HandlenNar(client *minio.Client) http.Handler {
 		vars := mux.Vars(r)
 		hash := vars["hash"]
 		compression := vars["compression"]
-		if isCompressionSupported(compression) {
+		if !isCompressionSupported(compression) {
 			panic(fmt.Sprintf("Unknown compression: %v", compression))
 		}
 		if r.Method == http.MethodHead {

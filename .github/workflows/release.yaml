@@ -26,5 +26,5 @@ jobs:
 
     - name: 'Build Inventory Image'
       run: |
-        docker image tag meshix-server:0.0.1-rc0 ghcr.io/code-growers/meshix/meshix-server:0.0.1-rc0
-        docker push ghcr.io/code-growers/meshix/meshix-server:0.0.1-rc0
+        docker image tag meshix-server:0.0.1-rc0 ghcr.io/code-growers/meshix/meshix-server:${{ github.sha }}
+        docker push ghcr.io/code-growers/meshix/meshix-server:${{ github.sha }}
