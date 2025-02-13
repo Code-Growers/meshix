@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"google.golang.org/grpc"
@@ -33,21 +34,16 @@ type buildOverrides struct {
 type BuildCommand struct {
 	HubUrl    string         `long:"hub-url" description:"Url of package hub"`
 	Cache     string         `long:"cache" description:"Cache to push artifacts to, if not specified nothing is pushed"`
-	Watch     bool           `long:"Watch the store and upload changes when building package"`
+	Watch     bool           `long:"watch" description:"Watch the store and upload changes when building package"`
+	All       bool           `long:"all" description:"Builds all packages in current flake"`
 	Overrides buildOverrides `group:"overrides"`
 }
 
 func (x *BuildCommand) Execute(args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("Expected 1 argument, got: %d", len(args))
+	if len(args) != 1 && !x.All {
+		return fmt.Errorf("Expected 1 argument or --all flag, got: %d", len(args))
 	}
 	ctx := context.Background()
-	expr := args[0]
-
-	meta, err := getPackageMeta(ctx, expr)
-	if err != nil {
-		return err
-	}
 
 	watchCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -56,10 +52,46 @@ func (x *BuildCommand) Execute(args []string) error {
 		go func() {
 			err := WatchStore(watchCtx, "/nix/store/", x.Cache)
 			if err != nil {
+				// TODO better log
 				fmt.Printf("Watching store failed: %v\n", err)
 				os.Exit(1)
 			}
 		}()
+	}
+	expressions := []string{}
+	if x.All {
+		pkgs, err := getAllFlakePackages(ctx)
+		if err != nil {
+			return err
+		}
+		expressions = append(expressions, pkgs...)
+	} else {
+		expressions = append(expressions, args[0])
+	}
+
+	wg := sync.WaitGroup{}
+	for _, expr := range expressions {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			err := x.buildExpr(ctx, expr)
+			if err != nil {
+				// TODO better log
+				fmt.Printf("Expr build failed: %v\n", err)
+				os.Exit(1)
+			}
+		}()
+	}
+	wg.Wait()
+
+	return nil
+}
+
+func (x *BuildCommand) buildExpr(ctx context.Context, expr string) error {
+	meta, err := getPackageMeta(ctx, expr)
+	if err != nil {
+		return err
 	}
 
 	buildOutput, err := buildPackage(ctx, expr)
@@ -107,6 +139,39 @@ func (x *BuildCommand) Execute(args []string) error {
 	return nil
 }
 
+func getAllFlakePackages(ctx context.Context) ([]string, error) {
+	evalArgs := []string{
+		"flake", "show", "--quiet", "--json",
+	}
+	output, err := runNixCmd(ctx, "nix", evalArgs...)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to show flake data 'nix %s' : %w", strings.Join(evalArgs, " "), err)
+	}
+	var data map[string]any
+	err = json.NewDecoder(output).Decode(&data)
+	if err != nil {
+		return nil, err
+	}
+	packages, ok := data["packages"].(map[string]any)
+	if !ok {
+		// TODO log no package to build
+		return []string{}, nil
+	}
+
+	// TODO determine which system to build for
+	linuxPackages, ok := packages["x86_64-linux"].(map[string]any)
+	if !ok {
+		// TODO log no package to build
+		return []string{}, nil
+	}
+	result := []string{}
+	for pkgs := range linuxPackages {
+		result = append(result, fmt.Sprintf(".#packages.x86_64-linux.%s", pkgs))
+	}
+
+	return result, nil
+}
+
 func getPackageMainBin(cmd *BuildCommand, meta *nixMeta) string {
 	if cmd.Overrides.MainBin != "" {
 		return cmd.Overrides.MainBin
@@ -127,7 +192,7 @@ func getPackageVersion(ctx context.Context, expr string, cmd *BuildCommand, meta
 		evalExpr += ".version"
 	}
 	evalArgs := []string{
-		"eval", "--json", evalExpr,
+		"eval", "--quiet", "--json", evalExpr,
 	}
 	output, err := runNixCmd(ctx, "nix", evalArgs...)
 	if err != nil {
@@ -146,7 +211,7 @@ func getPackageVersion(ctx context.Context, expr string, cmd *BuildCommand, meta
 func pushPackage(ctx context.Context, cacheUrl string, expr string) error {
 	slog.Info("Pushing to binary cache", "expr", expr)
 
-	_, err := runNixCmd(ctx, "nix", "copy", "--to", cacheUrl, expr)
+	_, err := runNixCmd(ctx, "nix", "copy", "--quiet", "--to", cacheUrl, expr)
 	if err != nil {
 		return fmt.Errorf("Failed to push to binary cache: %w", err)
 	}
@@ -156,7 +221,7 @@ func pushPackage(ctx context.Context, cacheUrl string, expr string) error {
 func buildPackage(ctx context.Context, expr string) (*nixBuildOutput, error) {
 	slog.Info(fmt.Sprintf("Building %s", expr))
 	// TODO add substituters and trusted keys
-	output, err := runNixCmd(ctx, "nix", "build", "--json", expr)
+	output, err := runNixCmd(ctx, "nix", "build", "--quiet", "--json", expr)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +251,7 @@ func getPackageMeta(ctx context.Context, expr string) (*nixMeta, error) {
 		evalExpr += ".meta"
 	}
 	evalArgs := []string{
-		"eval", "--json", evalExpr,
+		"eval", "--json", "--quiet", evalExpr,
 	}
 	output, err := runNixCmd(ctx, "nix", evalArgs...)
 	if err != nil {
@@ -200,7 +265,7 @@ func getPackageMeta(ctx context.Context, expr string) (*nixMeta, error) {
 	if meta.MainProgram != "" {
 		slog.Info("Found main bin", "bin", meta.MainProgram)
 	} else {
-		return nil, fmt.Errorf("No main program found. Package needs to have meta.mainProgram defined")
+		return nil, fmt.Errorf("No main program found for %s. Package needs to have meta.mainProgram defined", expr)
 	}
 
 	return &meta, nil

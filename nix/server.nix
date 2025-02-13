@@ -15,15 +15,14 @@ buildGoModule {
     root = ./..;
     fileset = globset.lib.globs ./.. [
       "server/**"
-      "client/**"
+      "client/go.mod"
+      "client/go.sum"
       "gen/**"
       "go.*"
     ];
   };
   env.CGO_ENABLED = 0;
   version = "0.0.1";
-  gitSha = "S9smJTcfEAFIMEPeaPC1yOyO6QDHwFthOztf4";
-
 
   proxyVendor = true;
   subPackages = [
