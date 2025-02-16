@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
 	"time"
 
 	"google.golang.org/grpc"
@@ -69,21 +68,16 @@ func (x *BuildCommand) Execute(args []string) error {
 		expressions = append(expressions, args[0])
 	}
 
-	wg := sync.WaitGroup{}
+	// TODO handle controll from user, ^C and cross build errors
+	// TODO split output, it's not readable in console currently
 	for _, expr := range expressions {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			err := x.buildExpr(ctx, expr)
-			if err != nil {
-				// TODO better log
-				fmt.Printf("Expr build failed: %v\n", err)
-				os.Exit(1)
-			}
-		}()
+		err := x.buildExpr(ctx, expr)
+		if err != nil {
+			// TODO better log
+			fmt.Printf("Expr build failed: %v\n", err)
+			os.Exit(1)
+		}
 	}
-	wg.Wait()
 
 	return nil
 }
@@ -106,7 +100,7 @@ func (x *BuildCommand) buildExpr(ctx context.Context, expr string) error {
 		}
 	}
 
-	version, err := getPackageVersion(ctx, expr, x, meta)
+	version, err := getPackageVersion(ctx, expr, x)
 	if err != nil {
 		return err
 	}
@@ -177,10 +171,15 @@ func getPackageMainBin(cmd *BuildCommand, meta *nixMeta) string {
 		return cmd.Overrides.MainBin
 	}
 
-	return meta.MainProgram
+	main := meta.MainProgram
+	if main != "" {
+		return main
+	}
+
+	return meta.Name
 }
 
-func getPackageVersion(ctx context.Context, expr string, cmd *BuildCommand, meta *nixMeta) (string, error) {
+func getPackageVersion(ctx context.Context, expr string, cmd *BuildCommand) (string, error) {
 	if cmd.Overrides.Version != "" {
 		return cmd.Overrides.Version, nil
 	}
@@ -196,7 +195,8 @@ func getPackageVersion(ctx context.Context, expr string, cmd *BuildCommand, meta
 	}
 	output, err := runNixCmd(ctx, "nix", evalArgs...)
 	if err != nil {
-		return "", fmt.Errorf("Failed to eval package meta 'nix %s' : %w", strings.Join(evalArgs, " "), err)
+		slog.ErrorContext(ctx, "Failed to eval package meta", "evalCmd", strings.Join(evalArgs, " "), "err", err)
+		return "", nil
 	}
 
 	var version string
@@ -261,11 +261,6 @@ func getPackageMeta(ctx context.Context, expr string) (*nixMeta, error) {
 	err = json.NewDecoder(output).Decode(&meta)
 	if err != nil {
 		return nil, err
-	}
-	if meta.MainProgram != "" {
-		slog.Info("Found main bin", "bin", meta.MainProgram)
-	} else {
-		return nil, fmt.Errorf("No main program found for %s. Package needs to have meta.mainProgram defined", expr)
 	}
 
 	return &meta, nil

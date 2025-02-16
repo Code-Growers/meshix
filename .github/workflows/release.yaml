@@ -1,9 +1,8 @@
 name: "Release"
 
 on:
-  push:
-    branches:
-      - 'main'
+  release:
+    types: [published]
 
 jobs:
   release:
@@ -24,7 +23,7 @@ jobs:
         username: ${{github.actor}}
         password: ${{secrets.GITHUB_TOKEN}}
 
-    - name: 'Build Inventory Image'
+    - name: 'Build Image'
       run: |
-        docker image tag meshix-server:0.0.1-rc0 ghcr.io/code-growers/meshix/meshix-server:${{ github.sha }}
-        docker push ghcr.io/code-growers/meshix/meshix-server:${{ github.sha }}
+        docker image tag meshix-server:0.0.1-rc0 ghcr.io/code-growers/meshix/meshix-server:${{ github.event.release.tag_name }}
+        docker push ghcr.io/code-growers/meshix/meshix-server:${{ github.event.release.tag_name }}

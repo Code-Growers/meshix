@@ -34,8 +34,9 @@
           clientPkg = pkgs.callPackage ./nix/client.nix {
             globset = globset;
           };
-          serverDocker = pkgs.callPackage ./nix/docker.nix {
+          dockerImgs = pkgs.callPackage ./nix/docker.nix {
             meshix-server = serverPkg;
+            meshix-client = clientPkg;
           };
         in
         rec {
@@ -47,7 +48,9 @@
             server = serverPkg;
             client = clientPkg;
             default = serverPkg;
-            server_docker = serverDocker;
+            server_docker = dockerImgs.server;
+            client_docker = dockerImgs.client;
+            client_nix_docker = dockerImgs.clientWithStore;
           };
 
           make-shells.default = {
