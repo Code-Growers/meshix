@@ -106,8 +106,8 @@ func run(ctx context.Context, args []string) error {
 
 	mux := mux.NewRouter()
 	mux.HandleFunc("/cache/nix-cache-info", handlers.HandleNixCacheInfo)
-	mux.Handle("/cache/nar/{hash}.nar.{compression}", handlers.HandlenNar(minioClient))
-	mux.Handle("/cache/{hash}.narinfo", handlers.HandleNarInfo(minioClient, cfg.BinaryCacheCfg))
+	mux.Handle("/cache/nar/{hash}.nar.{compression}", handlers.HandlenNar(minioClient, cfg.MinioCfg))
+	mux.Handle("/cache/{hash}.narinfo", handlers.HandleNarInfo(minioClient, cfg.BinaryCacheCfg, cfg.MinioCfg))
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))

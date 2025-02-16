@@ -18,6 +18,7 @@ type cli struct {
 	MinioUrl           string `kong:"name='s3-url',help='s3 URL',default='http://localhost:9001',env='S3_URL'"`
 	MinioAcccessKey    string `kong:"name='s3-access-key',help='s3 access key',env='S3_ACCESS_KEY'"`
 	MinioAcccessSecret string `kong:"name='s3-access-secret',help='s3 access secret',env='S3_ACCESS_SECRET'"`
+	MinioBucket        string `kong:"name='s3-bucket',help='s3 bucket',env='S3_BUCKET'"`
 }
 
 type Config struct {
@@ -37,6 +38,7 @@ type MinioCfg struct {
 	Url           url.URL
 	AcccessKey    string
 	AcccessSecret string
+	Bucket        string
 }
 
 func LoadConfiguration(args []string) (Config, error) {
@@ -75,6 +77,7 @@ func LoadConfiguration(args []string) (Config, error) {
 			Url:           defaultLeft(*minioUrl, cfg.MinioCfg.Url),
 			AcccessKey:    defaultLeft(cli.MinioAcccessKey, cfg.MinioCfg.AcccessKey),
 			AcccessSecret: defaultLeft(cli.MinioAcccessSecret, cfg.MinioCfg.AcccessSecret),
+			Bucket:        defaultLeft(cli.MinioBucket, cfg.MinioCfg.Bucket),
 		},
 	}
 

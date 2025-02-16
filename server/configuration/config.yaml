@@ -1,4 +1,5 @@
 ListenAddr: "0.0.0.0:8088"
 SecretKey: ""
 Minio:
+  Bucket: nix
   Url: http://localhost:9001

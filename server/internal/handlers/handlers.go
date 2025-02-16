@@ -39,7 +39,7 @@ func HandleNixCacheInfo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func HandleNarInfo(client *minio.Client, cacheCfg config.BinaryCacheCfg) http.Handler {
+func HandleNarInfo(client *minio.Client, cacheCfg config.BinaryCacheCfg, s3Cfg config.MinioCfg) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		fmt.Printf("NAR Info Method: %+v Path: %+v\n", r.Method, r.URL.Path)
@@ -47,7 +47,7 @@ func HandleNarInfo(client *minio.Client, cacheCfg config.BinaryCacheCfg) http.Ha
 		hash := vars["hash"]
 		if r.Method == http.MethodHead {
 			slog.InfoContext(ctx, "Heading narinfo", "hash", hash)
-			obj, err := client.GetObject(ctx, "nix", hash+".narinfo", minio.GetObjectOptions{})
+			obj, err := client.GetObject(ctx, s3Cfg.Bucket, hash+".narinfo", minio.GetObjectOptions{})
 			if err != nil {
 				slog.ErrorContext(ctx, "Failed to head narinfo", "err", err)
 				w.WriteHeader(http.StatusInternalServerError)
@@ -63,7 +63,7 @@ func HandleNarInfo(client *minio.Client, cacheCfg config.BinaryCacheCfg) http.Ha
 
 		if r.Method == http.MethodGet {
 			slog.InfoContext(ctx, "Getting narinfo", "hash", hash)
-			obj, err := client.GetObject(context.Background(), "nix", hash+".narinfo", minio.GetObjectOptions{})
+			obj, err := client.GetObject(context.Background(), s3Cfg.Bucket, hash+".narinfo", minio.GetObjectOptions{})
 			if err != nil {
 				slog.ErrorContext(ctx, "Failed to get nar info", "err", err)
 				w.WriteHeader(http.StatusInternalServerError)
@@ -113,7 +113,7 @@ func HandleNarInfo(client *minio.Client, cacheCfg config.BinaryCacheCfg) http.Ha
 			info.Signatures = append(info.Signatures, sig)
 
 			narinfoFile := bytes.NewBuffer([]byte(info.String()))
-			uploadInfo, err := client.PutObject(ctx, "nix", hash+".narinfo", narinfoFile, int64(narinfoFile.Len()), minio.PutObjectOptions{})
+			uploadInfo, err := client.PutObject(ctx, s3Cfg.Bucket, hash+".narinfo", narinfoFile, int64(narinfoFile.Len()), minio.PutObjectOptions{})
 			if err != nil {
 				slog.ErrorContext(ctx, "Failed to upload nar info", "err", err)
 				w.WriteHeader(http.StatusInternalServerError)
@@ -126,7 +126,7 @@ func HandleNarInfo(client *minio.Client, cacheCfg config.BinaryCacheCfg) http.Ha
 	})
 }
 
-func HandlenNar(client *minio.Client) http.Handler {
+func HandlenNar(client *minio.Client, minioCfg config.MinioCfg) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		fmt.Printf("NAR Method: %+v Path: %+v\n", r.Method, r.URL.Path)
@@ -138,7 +138,8 @@ func HandlenNar(client *minio.Client) http.Handler {
 		}
 		if r.Method == http.MethodHead {
 			slog.InfoContext(ctx, "Heading nar", "hash", hash)
-			obj, err := client.GetObject(ctx, "nix", hash+".nar", minio.GetObjectOptions{})
+			// TODO move bucket to cfg
+			obj, err := client.GetObject(ctx, minioCfg.Bucket, hash+".nar", minio.GetObjectOptions{})
 			if err != nil {
 				slog.ErrorContext(r.Context(), "Failed to get nar", "err", err)
 				w.WriteHeader(http.StatusInternalServerError)
@@ -154,7 +155,7 @@ func HandlenNar(client *minio.Client) http.Handler {
 		}
 		if r.Method == http.MethodGet {
 			slog.InfoContext(ctx, "Getting nar", "hash", hash)
-			obj, err := client.GetObject(ctx, "nix", hash+".nar", minio.GetObjectOptions{})
+			obj, err := client.GetObject(ctx, minioCfg.Bucket, hash+".nar", minio.GetObjectOptions{})
 			if err != nil {
 				slog.ErrorContext(r.Context(), "Failed to get nar", "err", err)
 				w.WriteHeader(http.StatusInternalServerError)
@@ -222,7 +223,7 @@ func HandlenNar(client *minio.Client) http.Handler {
 				return
 			}
 
-			uploadInfo, err := client.PutObject(context.Background(), "nix", hash+".nar", body, int64(body.Len()), minio.PutObjectOptions{})
+			uploadInfo, err := client.PutObject(context.Background(), minioCfg.Bucket, hash+".nar", body, int64(body.Len()), minio.PutObjectOptions{})
 			if err != nil {
 				slog.ErrorContext(r.Context(), "Failed to upload nar", "err", err)
 				w.WriteHeader(http.StatusInternalServerError)
