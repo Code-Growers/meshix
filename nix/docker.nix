@@ -51,6 +51,7 @@ in
       name = "meshix-server";
       tag = "0.0.1-rc0";
       contents = [
+        dockerTools.caCertificates
         configurations
         migrations
       ];
