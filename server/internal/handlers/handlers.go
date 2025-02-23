@@ -169,8 +169,7 @@ func HandlenNar(client *minio.Client, minioCfg config.MinioCfg) http.Handler {
 			}
 
 			w.Header().Add("content-type", "application/x-nix-nar")
-			compressedResp := bytes.NewBuffer([]byte{})
-			compressedW, err := NewCompressionWriter(compression, compressedResp)
+			compressedW, err := NewCompressionWriter(compression, w)
 			if err != nil {
 				slog.ErrorContext(ctx, "Failed to create compression writer", "err", err)
 				w.WriteHeader(http.StatusInternalServerError)
@@ -192,12 +191,6 @@ func HandlenNar(client *minio.Client, minioCfg config.MinioCfg) http.Handler {
 			err = obj.Close()
 			if err != nil {
 				slog.ErrorContext(r.Context(), "Failed to close nar s3", "err", err)
-			}
-			_, err = w.Write(compressedResp.Bytes())
-			if err != nil {
-				slog.ErrorContext(ctx, "Failed to write whole body of nar", "err", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
 			}
 			return
 		}
