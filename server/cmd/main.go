@@ -5,6 +5,8 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	meshixv1 "gen/proto/meshix/v1"
 	"log"
@@ -60,6 +62,8 @@ func run(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	cfgJson, _ := json.Marshal(cfg)
+	slog.InfoContext(ctx, "Running with config", "cfg", string(cfgJson))
 
 	grpcPanicRecoveryHandler := func(p any) (err error) {
 		slog.Error("gRPC recovered from panic", "panic", p, "stack", debug.Stack())
@@ -74,9 +78,15 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("Failed to create new minio client: %w", err)
 	}
 
-	_, err = minioClient.HealthCheck(10 * time.Second)
+	cancel, err := minioClient.HealthCheck(10 * time.Second)
 	if err != nil {
 		return fmt.Errorf("Failed to start minio health check: %w", err)
+	}
+	defer cancel()
+
+	isMinioOffline := minioClient.IsOffline()
+	if isMinioOffline {
+		return errors.New("Failed to ping minio")
 	}
 
 	dbPool, err := setupDB()

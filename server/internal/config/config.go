@@ -23,21 +23,21 @@ type cli struct {
 
 type Config struct {
 	ListenAddr     string
-	SecretKey      string // Don't use for binary cache. Used just for config loading. Use BinaryCacheCfg
-	SecretKeyPath  string // Don't use for binary cache. Used just for config loading. Use BinaryCacheCfg
+	SecretKey      string `json:"-"` // Don't use for binary cache. Used just for config loading. Use BinaryCacheCfg
+	SecretKeyPath  string `json:"-"` // Don't use for binary cache. Used just for config loading. Use BinaryCacheCfg
 	MinioCfg       MinioCfg
 	BinaryCacheCfg BinaryCacheCfg
 }
 
 type BinaryCacheCfg struct {
-	PrivateKey signature.SecretKey
+	PrivateKey signature.SecretKey `json:"-"`
 	PublicKey  signature.PublicKey
 }
 
 type MinioCfg struct {
 	Url           url.URL
-	AcccessKey    string
-	AcccessSecret string
+	AcccessKey    string `json:"-"`
+	AcccessSecret string `json:"-"`
 	Bucket        string
 }
 
