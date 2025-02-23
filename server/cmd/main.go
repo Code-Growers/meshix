@@ -78,6 +78,13 @@ func run(ctx context.Context, args []string) error {
 		return fmt.Errorf("Failed to create new minio client: %w", err)
 	}
 
+	minioHealhUrl := cfg.MinioCfg.Url
+	minioHealhUrl.Path = "/minio/health/live"
+	_, err = http.Get(minioHealhUrl.String())
+	if err != nil {
+		return fmt.Errorf("Failed to ping minio: %w", err)
+	}
+
 	cancel, err := minioClient.HealthCheck(10 * time.Second)
 	if err != nil {
 		return fmt.Errorf("Failed to start minio health check: %w", err)
